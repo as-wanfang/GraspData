@@ -151,17 +151,17 @@ np.savez(checkpoint_path+'/accuracy', a_test=a_test, a_train=a_train, test_predi
 
 
 #calculate prediction accuracy
-y = np.argmax(mnist.test.labels, 1)
-y_ = test_prediction[np.argmax(a_test)] #[10000*n,11]
+y = mnist.test.labels
+y_ = test_prediction[np.argmax(a_test)] #[1000*n,11]
 
 cols = [ "Indicator_"+str(i) for i in range(n)]
-y_prediction = pd.DataFrame(np.zeros([10000, n]), columns=cols)
+y_prediction = pd.DataFrame(np.zeros([1000, n]), columns=cols)
 for i in range(n):
-    y_prediction['Indicator_'+str(i)] = np.argmax( y_[i*10000:(i+1)*10000,:],1)
+    y_prediction['Indicator_'+str(i)] = np.argmax( y_[i*1000:(i+1)*1000,:],1)
 
 true_count = 0.0
 pass_logic_check_count = 0.0
-for i in range(10000):
+for i in range(1000):
     critirier = y_prediction.loc[i] == 10
     # see if there are exactly n-1 conflict prediction
     if sum(critirier) != n-1:
@@ -174,9 +174,9 @@ for i in range(10000):
         true_count += 1
 
 print('The accuracy without logic is %s'%(max(a_test)))
-print('The rate of passing logic check is %s'%(pass_logic_check_count/10000))
+print('The rate of passing logic check is %s'%(pass_logic_check_count/1000))
 print('The conditional accuracy after passing logic check is %s'%(true_count/pass_logic_check_count))
-print('The total accuracy with logic check is %s'%(true_count/10000))
+print('The total accuracy with logic check is %s'%(true_count/1000))
 
 # case 8
 #The accuracy without logic is 0.9922
