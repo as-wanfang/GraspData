@@ -9,7 +9,7 @@ tf.set_random_seed(0)
 import numpy as np
 import pandas as pd
 
-BATCH_SIZE = 100
+BATCH_SIZE = 50
 
 mnist = read_data_sets("data")
 
@@ -126,7 +126,13 @@ def generate_data(batch_X, batch_Y):
 a_train = []
 a_test = []
 test_prediction = []
-for i in range(20001):
+
+test_X_rep_1, test_X2_rep_1, test_Y_rep_1 = generate_data(mnist.test.images[:250], mnist.test.labels[:250])
+test_X_rep_2, test_X2_rep_2, test_Y_rep_2 = generate_data(mnist.test.images[250:500], mnist.test.labels[250:500])
+test_X_rep_3, test_X2_rep_3, test_Y_rep_3 = generate_data(mnist.test.images[500:750], mnist.test.labels[500:750])
+test_X_rep_4, test_X2_rep_4, test_Y_rep_4 = generate_data(mnist.test.images[750:], mnist.test.labels[750:])
+
+for i in range(30001):
     # training on batches of 100 images with 100 labels
     batch_X, batch_Y = mnist.train.next_batch(BATCH_SIZE)
     batch_X_rep, batch_X2_rep, batch_Y_rep = generate_data(batch_X, batch_Y)
@@ -137,41 +143,42 @@ for i in range(20001):
     learning_rate = min_learning_rate + (max_learning_rate - min_learning_rate) * math.exp(-i/decay_speed)
     sess.run(train_step, {X: batch_X_rep, X2: batch_X2_rep, Y_: batch_Y_rep, lr: learning_rate})
     # compute training values for visualisation
-    if i%10==0:
+    if i%100==0:
         a = sess.run(accuracy, {X: batch_X_rep, X2: batch_X2_rep, Y_: batch_Y_rep})
         print(str(i) + ": accuracy:" + str(a) + " (lr:" + str(learning_rate) + ")")
         a_train.append(a)
     # compute test values for visualisation
     if i%100==0:
-        test_X_rep, test_X2_rep, test_Y_rep = generate_data(mnist.test.images[:500], mnist.test.labels[:500])
-        a_1 = sess.run(accuracy, {X: test_X_rep, X2: test_X2_rep, Y_: test_Y_rep})
-        y_1 = sess.run(Y, {X: test_X_rep, X2: test_X2_rep})
-        test_X_rep, test_X2_rep, test_Y_rep = generate_data(mnist.test.images[500:], mnist.test.labels[500:])
-        a_2 = sess.run(accuracy, {X: test_X_rep, X2: test_X2_rep, Y_: test_Y_rep})
-        y_2 = sess.run(Y, {X: test_X_rep, X2: test_X2_rep})
+        a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_1, Y_: test_Y_rep_1})
+        y_1 = sess.run(Y, {X: test_X_rep_1, X2: test_X2_rep_1})
+        a_2 = sess.run(accuracy, {X: test_X_rep_2, X2: test_X2_rep_2, Y_: test_Y_rep_2})
+        y_2 = sess.run(Y, {X: test_X_rep_2, X2: test_X2_rep_2})
+        a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_1, Y_: test_Y_rep_3})
+        a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_4, Y_: test_Y_rep_4})
         a = (a_1+a_2)/2.0
         a_test.append(a)
         y = np.concatenate([y_1,y_2])
         test_prediction.append(y)
         print(str(i) + ": ********* epoch " + str(i*BATCH_SIZE//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a))
 
-saver.save(sess, checkpoint_path + '/Network1', global_step = i)
+saver.save(sess, checkpoint_path + '/Network', global_step = i)
 
 print("max test accuracy: " + str(max(a_test)))
 np.savez(checkpoint_path+'/accuracy', a_test=a_test, a_train=a_train, test_prediction=test_prediction)
 
 
 #calculate prediction accuracy
-y = mnist.test.labels
-y_ = test_prediction[np.argmax(a_test)] #[1000*n,11]
+y_ = np.concatenate([test_Y_rep_1,test_Y_rep_2])
+y = test_prediction[np.argmax(a_test)] #[1000*n,11]
 
 cols = [ "Indicator_"+str(i) for i in range(n)]
 y_prediction = pd.DataFrame(np.zeros([1000, n]), columns=cols)
 for i in range(n):
-    y_prediction['Indicator_'+str(i)] = np.argmax( y_[i*1000:(i+1)*1000,:],1)
+    y_prediction['Indicator_'+str(i)] = np.concatenate([np.argmax( y[i*500:(i+1)*500,:],1),np.argmax( y[(2500+i*500):(2500+(i+1)*500),:],1)])
 
 true_count = 0.0
 pass_logic_check_count = 0.0
+labels = mnist.test.labels
 for i in range(1000):
     critirier = y_prediction.loc[i] == 10
     # see if there are exactly n-1 conflict prediction
@@ -181,7 +188,7 @@ for i in range(1000):
     if y_prediction.loc[i,np.argmin(critirier)] not in indicators[int(np.argmin(critirier).split('_')[1])]:
         continue
     pass_logic_check_count += 1
-    if y_prediction.loc[i,np.argmin(critirier)] == y[i]:
+    if y_prediction.loc[i,np.argmin(critirier)] == labels[i]:
         true_count += 1
 
 print('The accuracy without logic is %s'%(max(a_test)))
@@ -189,8 +196,3 @@ print('The rate of passing logic check is %s'%(pass_logic_check_count/1000))
 print('The conditional accuracy after passing logic check is %s'%(true_count/pass_logic_check_count))
 print('The total accuracy with logic check is %s'%(true_count/1000))
 
-# case 8
-#The accuracy without logic is 0.9922
-#The rate of passing logic check is 0.9957
-#The conditional accuracy after passing logic check is 0.991262428442302
-#The total accuracy with logic check is 0.987
