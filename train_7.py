@@ -150,14 +150,16 @@ for i in range(30001):
     # compute test values for visualisation
     if i%100==0:
         a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_1, Y_: test_Y_rep_1})
-        y_1 = sess.run(Y, {X: test_X_rep_1, X2: test_X2_rep_1})
         a_2 = sess.run(accuracy, {X: test_X_rep_2, X2: test_X2_rep_2, Y_: test_Y_rep_2})
+        a_3 = sess.run(accuracy, {X: test_X_rep_3, X2: test_X2_rep_3, Y_: test_Y_rep_3})
+        a_4 = sess.run(accuracy, {X: test_X_rep_4, X2: test_X2_rep_4, Y_: test_Y_rep_4})
+        y_1 = sess.run(Y, {X: test_X_rep_1, X2: test_X2_rep_1})
         y_2 = sess.run(Y, {X: test_X_rep_2, X2: test_X2_rep_2})
-        a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_1, Y_: test_Y_rep_3})
-        a_1 = sess.run(accuracy, {X: test_X_rep_1, X2: test_X2_rep_4, Y_: test_Y_rep_4})
-        a = (a_1+a_2)/2.0
+        y_3 = sess.run(Y, {X: test_X_rep_3, X2: test_X2_rep_3})
+        y_4 = sess.run(Y, {X: test_X_rep_4, X2: test_X2_rep_4})
+        a = (a_1+a_2+a_3+a_4)/4.0
         a_test.append(a)
-        y = np.concatenate([y_1,y_2])
+        y = np.concatenate([y_1,y_2,y_3,y_4])
         test_prediction.append(y)
         print(str(i) + ": ********* epoch " + str(i*BATCH_SIZE//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a))
 
@@ -166,15 +168,14 @@ saver.save(sess, checkpoint_path + '/Network', global_step = i)
 print("max test accuracy: " + str(max(a_test)))
 np.savez(checkpoint_path+'/accuracy', a_test=a_test, a_train=a_train, test_prediction=test_prediction)
 
-
 #calculate prediction accuracy
-y_ = np.concatenate([test_Y_rep_1,test_Y_rep_2])
+y_ = np.concatenate([test_Y_rep_1,test_Y_rep_2,test_Y_rep_3,test_Y_rep_4])
 y = test_prediction[np.argmax(a_test)] #[1000*n,11]
 
 cols = [ "Indicator_"+str(i) for i in range(n)]
 y_prediction = pd.DataFrame(np.zeros([1000, n]), columns=cols)
 for i in range(n):
-    y_prediction['Indicator_'+str(i)] = np.concatenate([np.argmax( y[i*500:(i+1)*500,:],1),np.argmax( y[(2500+i*500):(2500+(i+1)*500),:],1)])
+    y_prediction['Indicator_'+str(i)] = np.concatenate([np.argmax( y[i*250:(i+1)*250,:],1),np.argmax( y[(2500+i*250):(2500+(i+1)*250),:],1),np.argmax( y[(5000+i*250):(5000+(i+1)*250),:],1),np.argmax( y[(7500+i*250):(7500+(i+1)*250),:],1)])
 
 true_count = 0.0
 pass_logic_check_count = 0.0
@@ -195,4 +196,3 @@ print('The accuracy without logic is %s'%(max(a_test)))
 print('The rate of passing logic check is %s'%(pass_logic_check_count/1000))
 print('The conditional accuracy after passing logic check is %s'%(true_count/pass_logic_check_count))
 print('The total accuracy with logic check is %s'%(true_count/1000))
-
